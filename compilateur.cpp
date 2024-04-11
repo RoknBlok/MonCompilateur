@@ -28,11 +28,14 @@
 
 using namespace std;
 
+enum KEYWORD {IF, THEN, ELSE, WHILE, DO, TO, BEGIN, END};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
 
 TOKEN current;				// Current token
+
+void Statement(void);		// Called by StatementPart() and calls AssignementStatement()
 
 
 FlexLexer* lexer = new yyFlexLexer; // This is the flex tokeniser
@@ -299,10 +302,57 @@ void AssignementStatement(void){
 	cout << "\tpop "<<variable<<endl;
 }
 
+//function ifStatement
+void IfStatement(void){
+	OPREL oprel;
+	if(current!=IF)
+		Error("caractère 'if' attend");
+	current=(TOKEN) lexer->yylex();
+	Expression();
+	if(current!=THEN)
+		Error("caractère 'then' attendu");
+	current=(TOKEN) lexer->yylex();
+	cout << "\tpop %rax"<<endl;
+	cout << "\tcmpq $0, %rax"<<endl;
+	cout << "\tje Sinon"<<++TagNumber<<endl;
+	Statement();
+	cout << "\tjmp Suite"<<TagNumber<<endl;
+	cout << "Sinon"<<TagNumber<<":"<<endl;
+	if(current==ELSE){
+		current=(TOKEN) lexer->yylex();
+		Statement();
+	}
+	cout << "Suite"<<TagNumber<<":"<<endl;
+}
+
+//function whileStatement
+void WhileStatement(void){
+	OPREL oprel;
+	if(current!=WHILE)
+		Error("caractère 'while' attendu");
+	current=(TOKEN) lexer->yylex();
+	cout << "Debut"<<++TagNumber<<":"<<endl;
+	Expression();
+	cout << "\tpop %rax"<<endl;
+	cout << "\tcmpq $0, %rax"<<endl;
+	cout << "\tje Suite"<<TagNumber<<endl;
+	if(current!=DO)
+		Error("caractère 'do' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	cout << "\tjmp Debut"<<TagNumber<<endl;
+	cout << "Suite"<<TagNumber<<":"<<endl;
+}
+
+//function forStatement
+
+
 // Statement := AssignementStatement
 void Statement(void){
 	AssignementStatement();
 }
+
+
 
 // StatementPart := Statement {";" Statement} "."
 void StatementPart(void){
