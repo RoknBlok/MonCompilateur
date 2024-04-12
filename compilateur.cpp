@@ -349,7 +349,20 @@ void WhileStatement(void){
 
 // Statement := AssignementStatement
 void Statement(void){
-	AssignementStatement();
+	switch(current){
+		case ID:
+			AssignementStatement();
+			break;
+		case IF:
+			IfStatement();
+			break;
+		case WHILE:
+			WhileStatement();
+			break;
+		default:
+			Error("Instruction attendue");
+			break;
+	}
 }
 
 
