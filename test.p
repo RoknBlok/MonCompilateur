@@ -1,3 +1,7 @@
-[a,b,c,z]
-z:=(8==3)||(4==2*2);
-b:=(5/65+2)<(7%5).
+VAR
+  i: INTEGER.
+FOR i := 1 TO 10 DO
+BEGIN
+	DISPLAY i;
+	DISPLAY '\n'
+END.
