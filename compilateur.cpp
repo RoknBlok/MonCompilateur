@@ -34,7 +34,7 @@ using namespace std;
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
-enum TYPES {INTEGER, BOOLEAN, CHAR, DOUBLE, STRING};
+enum TYPES {INTEGER, BOOLEAN, CHAR, DOUBLE, STRING, WTFT};
 
 string typeString[] = {
 	"INTEGER", "BOOLEAN", "DOUBLE", "CHAR", "STRING"
@@ -137,15 +137,31 @@ enum TYPES Expression(void);			// Called by Term() and calls Term()
 void Statement(void);
 void StatementPart(void);
 		
-enum TYPES Identifier(void){
-	enum TYPES type;
+enum TYPES Identifier() {
 	if (current != ID) {
 		Error("(Identifier) Erreur: Identifiant attendu!");
 	}
 	string id = lexer->YYText();
 	current = (TOKEN)lexer->yylex();
 
-	// Appel de routine dans une expression.
+	if (is_subroutine) {
+		vector<Variable> localVector = DeclaredSubroutines[currentSubroutine].local;
+		for (int i = 0; i < localVector.size(); i++) {
+			if (localVector[i].name == id) {
+				cout << "\tpushq\t" << -8 - 8 * i << "(%rbp)" << endl;
+				return localVector[i].type;
+			}
+		}
+
+		vector<Variable> argumentsVector = DeclaredSubroutines[currentSubroutine].arguments;
+		for (int i = 0; i < argumentsVector.size(); i++) {
+			if (argumentsVector[i].name == id) {
+				cout << "\tpushq\t" << 16 + 8 * i << "(%rbp)" << endl;
+				return argumentsVector[i].type;
+			}
+		}
+	}
+
 	if (current == LPARENT) {
 		if (!IsSubroutineDeclared(id)) {
 			Error("(Identifier) Erreur: Routine non définie!");
@@ -158,31 +174,14 @@ enum TYPES Identifier(void){
 		return returnType;
 	}
 
-	if (is_subroutine) {
-		vector<Variable> argumentsVector = DeclaredSubroutines[currentSubroutine].arguments;
-		for (int i = 0; i < argumentsVector.size(); i++) {
-			if (argumentsVector[i].name == id) {
-				cout << "\tpushq\t" << 16 + 8 * i << "(%rbp)" << endl;
-				return argumentsVector[i].type;
-			}
-		}
-
-		vector<Variable> localVector = DeclaredSubroutines[currentSubroutine].local;
-		for (int i = 0; i < localVector.size(); i++) {
-			if (localVector[i].name == id) {
-				cout << "\tpushq\t" << -8 - 8 * i << "(%rbp)" << endl;
-				return localVector[i].type;
-			}
-		}
-	}
-
 	if (!IsDeclared(id)) {
 		Error("(Identifier) Erreur: Variable non déclarée!");
 	}
+
 	cout << "\tpushq\t" << id << endl;
 	return DeclaredVariables.find({id})->type;
-	return type;
 }
+
 
 enum TYPES Number(void){
 	bool is_a_decimal=false;
@@ -421,9 +420,14 @@ enum TYPES Type(void){
 		current=(TOKEN) lexer->yylex();
 		return CHAR;
 	}
-	else
-		Error("type inconnu");
-	
+	else if(strcmp(lexer->YYText(),"STRING")==0){
+		current=(TOKEN) lexer->yylex();
+		return STRING;
+	}
+	else {
+		current=(TOKEN) lexer->yylex();
+		return WTFT;
+	}
 }
 
 // Declaration := Ident {"," Ident} ":" Type
