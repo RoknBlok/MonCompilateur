@@ -28,7 +28,6 @@ pop %rax
 cmpq %rax, %rbx
 je CaseStatement1_1
 push %rax
-jmp CaseListElement1_2
 	push $2
 pop %rbx
 pop %rax
@@ -47,7 +46,6 @@ pop %rax
 cmpq %rax, %rbx
 je CaseStatement1_2
 push %rax
-jmp CaseListElement1_3
 CaseStatement1_2:
 	push $50
 	pop a
@@ -59,7 +57,6 @@ pop %rax
 cmpq %rax, %rbx
 je CaseStatement1_3
 push %rax
-jmp CaseListElement1_4
 CaseStatement1_3:
 	push $4
 	pop a
@@ -69,7 +66,7 @@ CaseListElement1_4:
 	xor 	%rax, %rax		# rax = 0
 	push $8
 	pop a
-EndCase1 :
+EndCase1:
 	push a
 	pop %rsi	# The value to be displayed
 	movq $FormatString1, %rdi	# "%llu\n"

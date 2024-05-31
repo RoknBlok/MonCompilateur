@@ -620,7 +620,6 @@ void CaseLabel(enum TYPES typeExpr, unsigned long caseTag) {
 			cout<<"cmpq %rax, %rbx"<<endl;
 			cout<<"je CaseStatement"<<tag<<"_"<<caseTag<<endl;
 			cout<<"push %rax"<<endl;
-			cout<<"jmp CaseListElement"<<tag<<"_"<<caseTag+1<<endl;
 			break;
 		default:
 			Error("Uniquement les types INT et BOOL fonctionnent avec le Case.");
@@ -639,11 +638,11 @@ void CaseLabel(enum TYPES typeExpr, unsigned long caseTag) {
 				cout<<"cmpq %rax, %rbx"<<endl;
 				cout<<"je CaseStatement"<<tag<<"_"<<caseTag<<endl;
 				cout<<"push %rax"<<endl;
-				cout<<"jmp CaseListElement"<<tag<<"_"<<caseTag+1<<endl;
 				break;
 			default:
 				Error("Uniquement les types INT et BOOL fonctionnent avec le Case.");
 		}
+		cout<<"jmp CaseListElement"<<tag<<"_"<<caseTag+1<<endl;
 	}
 }
 
@@ -700,7 +699,7 @@ void CaseStatement(void) {
 
 	ReadKeyword("END");
 	
-	cout << "EndCase" << tag << " :" << endl;
+	cout << "EndCase" << tag << ":" << endl;
 	
 }
 
