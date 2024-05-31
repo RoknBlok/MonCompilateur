@@ -1,25 +1,17 @@
-VAR		a,b :	INTEGER;
-		c1,c2:	CHAR;
-		num, denum, frac:		DOUBLE.
-c1:='f';
-c2:='a';
-num:=1.0;
-denum:=1.0;
-frac:=num/denum;
-a:=1;
-WHILE frac>0.1 DO
+VAR     a,b,c : INTEGER.
+
 BEGIN
-	DISPLAY c1;
-	DISPLAY '=';
-	DISPLAY frac;
-	DISPLAY '\n';
-	DISPLAY c2;
-	DISPLAY '=';
-	DISPLAY a;
-	DISPLAY '\n';
-	denum:=denum+1.0;
-	frac:=num/denum;
-	a:=a+1;
-	DISPLAY (a>3);
-	DISPLAY '\n'
-END.
+    a:=2;
+    b:=0;
+    c:=0
+END;
+
+CASE a OF
+1,2  : a := 100;
+6    : a := 50;
+b    : a := 4
+ELSE
+    a := 8
+END;
+
+DISPLAY a.

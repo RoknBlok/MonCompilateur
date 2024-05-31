@@ -57,6 +57,18 @@ void Error(string s){
 	exit(-1);
 }
 
+void ReadKeyword(string keyword) {
+	if (current != KEYWORD) {
+		Error("(ReadKeyword) Erreur: Mot clé attendu!");
+	}
+
+	if (strcmp(keyword.c_str(), lexer->YYText()) != 0) {
+		Error("(ReadKeyword) Erreur: Mot clé " + keyword + " attendu!");
+	}
+
+	current = (TOKEN)lexer->yylex();
+}
+
 // Program := [DeclarationPart] StatementPart
 // DeclarationPart := "[" Letter {"," Letter} "]"
 // StatementPart := Statement {";" Statement} "."
@@ -536,8 +548,164 @@ void DisplayStatement(void){
 }
 
 // ForStatement := "For" ID ":=" Expression ("TO"|"DOWNTO") Expression "DO" Statement
-void ForStatement(void){
+void ForStatement(void) {
+    unsigned long long tag = ++TagNumber;
+    
+    ReadKeyword("FOR"); //reconnaître FOR
+
+    string id = lexer->YYText();
+    bool found = false;
+    string position;
+    
+    if (!found) {
+        position = id; // Variable globale
+    }
+
+    AssignementStatement();  // reconnaître AssignmentStatement
+
+    if (current != KEYWORD) {
+        Error("(ForStatement) Erreur: Mot clé attendu!");
+    }
+
+    string jump;
+    string increment;
+    if (strcmp("TO", lexer->YYText()) == 0) {
+        jump = "\tja\tEndFor";
+        increment = "\taddq\t$1, ";
+    } else if (strcmp("DOWNTO", lexer->YYText()) == 0) {
+        jump = "\tjb\tEndFor";
+        increment = "\tsubq\t$1, ";
+    } else {
+        Error("(ForStatement) Erreur: Mots clés `TO` ou `DOWNTO` attendus!");
+    }
+    
+    current = (TOKEN)lexer->yylex();
+
+    cout << "For" << tag << ":" << endl;
+    cout << "TestFor" << tag << ":" << endl;
+
+    TYPES exprType = Expression();  //econnaître Expression
+    if (exprType != INTEGER) {
+        Error("(ForStatement) Erreur: L'incrément doit être entier!");
+    }
+
+    cout << "\tpopq\t%rax" << endl;  // res dans rax
+    cout << "\tcmpq\t%rax, " << position << endl;
+    cout << jump << tag << endl;
+
+    ReadKeyword("DO");
+
+    Statement();
+
+	//incrementation de la variable
+    cout << increment << position << endl;
+    cout << "\tjmp\tTestFor" << tag << endl;
+    cout << "EndFor" << tag << ":" << endl;
 }
+
+// CaseLabel := Factor { "," Factor }
+void CaseLabel(enum TYPES typeExpr, unsigned long caseTag) { 
+	enum TYPES factorType;
+	unsigned long long tag=TagNumber;
+
+	factorType=Factor();
+	if (factorType!=typeExpr) {
+		Error("(CaseStatement) Erreur : le type de l'expression du Case doit être le même que le CaseLabel");
+	}
+	switch(factorType) {
+		case INTEGER:
+		case BOOLEAN:
+			cout<<"pop %rbx"<<endl;
+			cout<<"pop %rax"<<endl;
+			cout<<"cmpq %rax, %rbx"<<endl;
+			cout<<"je CaseStatement"<<tag<<"_"<<caseTag<<endl;
+			cout<<"push %rax"<<endl;
+			cout<<"jmp CaseListElement"<<tag<<"_"<<caseTag+1<<endl;
+			break;
+		default:
+			Error("Uniquement les types INT et BOOL fonctionnent avec le Case.");
+			break;
+	}
+	while (current==COMMA) {
+		current=(TOKEN) lexer->yylex(); // skip ','
+		factorType=Factor();
+		if (factorType!=typeExpr) {
+			Error("(CaseStatement) Erreur : le type de l'expression du Case doit être le même que le CaseLabel");
+		}
+		switch(factorType) {
+			case INTEGER:
+				cout<<"pop %rbx"<<endl;
+				cout<<"pop %rax"<<endl;
+				cout<<"cmpq %rax, %rbx"<<endl;
+				cout<<"je CaseStatement"<<tag<<"_"<<caseTag<<endl;
+				cout<<"push %rax"<<endl;
+				cout<<"jmp CaseListElement"<<tag<<"_"<<caseTag+1<<endl;
+				break;
+			default:
+				Error("Uniquement les types INT et BOOL fonctionnent avec le Case.");
+		}
+	}
+}
+
+// CaseListElement := CaseLabel ":" Statement
+void CaseListElement(enum TYPES typeExpr, unsigned long caseTag) {
+	unsigned long long tag=TagNumber;
+	CaseLabel(typeExpr, caseTag);
+	if (current!=COLON) {
+		Error("(CaseListElement) Erreur : ':' attendu");
+	}
+	current=(TOKEN) lexer->yylex();
+	cout<<"CaseStatement"<<tag<<"_"<<caseTag++<<":"<<endl;
+	Statement();
+	cout<<"jmp EndCase"<<tag<<endl;
+}
+
+// CaseStatement := "CASE" Expression "OF" CaseListElement {";" CaseListElement} ["ELSE" Statement] "END"
+void CaseStatement(void) {
+	unsigned long long tag = ++TagNumber;
+	unsigned long caseTag = 0;
+
+	ReadKeyword("CASE");
+	
+	cout << "Case" << tag << " :" << endl;
+	
+	//reconnaitre l'expression
+	enum TYPES typeExpr = Expression();
+	
+	if (current != KEYWORD) {
+		Error("(CaseStatement) Erreur: Mot clé attendu!");
+	}
+
+	ReadKeyword("OF");
+	
+	//reconnaitre CaseListElement
+	cout<<"CaseListElement"<<tag<<"_"<<++caseTag<<":"<<endl;
+	CaseListElement(typeExpr, caseTag);
+	
+	while (current == SEMICOLON) {
+		current = (TOKEN)lexer->yylex(); // skip ';'
+		cout<<"CaseListElement"<<tag<<"_"<<++caseTag<<":"<<endl;
+		CaseListElement(typeExpr, caseTag);
+	}
+
+	cout<<"CaseListElement"<<tag<<"_"<<++caseTag<<":"<<endl;
+
+	//reconnaitre "ELSE" Statement
+	if (current == KEYWORD && strcmp(lexer->YYText(), "ELSE") == 0) {
+		current = (TOKEN)lexer->yylex();
+		cout<<"\tpop \t%rax"<<endl;							
+		cout<<"\txor \t%rax, %rax\t\t# rax = 0"<<endl;
+		Statement();
+	}
+
+	ReadKeyword("END");
+	
+	cout << "EndCase" << tag << " :" << endl;
+	
+}
+
+
+
 
 // WhileStatement := "WHILE" Expression "DO" Statement
 void WhileStatement(void){
@@ -549,9 +717,7 @@ void WhileStatement(void){
 	cout<<"\tpop %rax\t# Get the result of expression"<<endl;
 	cout<<"\tcmpq $0, %rax"<<endl;
 	cout<<"\tje EndWhile"<<tag<<"\t# if FALSE, jump out of the loop"<<tag<<endl;
-	if(current!=KEYWORD||strcmp(lexer->YYText(), "DO")!=0)
-		Error("mot-clé DO attendu");
-	current=(TOKEN) lexer->yylex();
+	ReadKeyword("DO");
 	Statement();
 	cout<<"\tjmp While"<<tag<<endl;
 	cout<<"EndWhile"<<tag<<":"<<endl;
@@ -565,9 +731,7 @@ void BlockStatement(void){
 		current=(TOKEN) lexer->yylex();	// Skip the ";"
 		Statement();
 	};
-	if(current!=KEYWORD||strcmp(lexer->YYText(), "END")!=0)
-		Error("mot-clé END attendu");
-	current=(TOKEN) lexer->yylex();
+	ReadKeyword("END");
 }
 
 // IfStatement := "IF" Expression "THEN" Statement ["ELSE" Statement]
@@ -579,9 +743,7 @@ void IfStatement(void){
 	cout<<"\tpop %rax\t# Get the result of expression"<<endl;
 	cout<<"\tcmpq $0, %rax"<<endl;
 	cout<<"\tje Else"<<tag<<"\t# if FALSE, jump to Else"<<tag<<endl;
-	if(current!=KEYWORD||strcmp(lexer->YYText(),"THEN")!=0)
-		Error("mot-clé 'THEN' attendu");
-	current=(TOKEN) lexer->yylex();
+	ReadKeyword("THEN");
 	Statement();
 	cout<<"\tjmp Next"<<tag<<"\t# Do not execute the else statement"<<endl;
 	cout<<"Else"<<tag<<":"<<endl; // Might be the same effective adress than Next:
@@ -591,6 +753,10 @@ void IfStatement(void){
 	}
 	cout<<"Next"<<tag<<":"<<endl;
 }
+
+// CaseLabel := Factor { "," Factor }
+// CaseListElement := CaseLabel ":" Statement
+// CaseStatement := "CASE" Expression "OF" CaseListElement {";" CaseListElement} ["ELSE" Statement] "END"
 
 // Statement := AssignementStatement|DisplayStatement|....
 void Statement(void){
@@ -605,6 +771,8 @@ void Statement(void){
 			WhileStatement();
 		else if(strcmp(lexer->YYText(),"BEGIN")==0)
 			BlockStatement();
+		else if(strcmp(lexer->YYText(),"CASE")==0)
+			CaseStatement();
 		else
 			Error("mot clé inconnu");
 	}
