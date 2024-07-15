@@ -4,9 +4,6 @@ A simple compiler.
 From : Pascal-like imperative LL(k) langage
 To : 64 bit 80x86 assembly langage (AT&T)
 
-**Download the repository :**
-
-> git clone git@framagit.org:jourlin/cericompiler.git
 
 **Build the compiler and test it :**
 
@@ -53,3 +50,9 @@ To : 64 bit 80x86 assembly langage (AT&T)
 // Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
 // Letter := "a"|...|"z"
 
+**Added :**
+
+// For loop
+// While loop
+// Switch/Case
+// Functions (not fixed)
